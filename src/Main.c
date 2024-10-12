@@ -13,9 +13,7 @@ int main(){
 
 	while(!WindowShouldClose()){
 		BeginDrawing();
-		ClearBackground(RAYWHITE);
-		Chess_MDraw(&chess);
-		EndDrawing();
+		Chess_MUpdate(&chess);
 	}
 
 	CloseWindow();

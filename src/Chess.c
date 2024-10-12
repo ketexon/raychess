@@ -95,8 +95,10 @@ const char* ChessBoard_SGetCellName(int r, int c) {
 }
 
 void ChessLayout_MRecalculate(struct ChessLayout* l, struct ChessBoard* b) {
+	l->rows = b->height;
+	l->cols = b->width;
 	l->cellGap = 1;
-	
+
 	int paddingX = 16;
 	int paddingY = 16;
 
@@ -124,7 +126,7 @@ void ChessLayout_MRecalculate(struct ChessLayout* l, struct ChessBoard* b) {
 	int hMaxCellWidth = (h + l->cellGap)/b->height - l->cellGap;
 
 	l->cellWidth = MIN(wMaxCellWidth, hMaxCellWidth);
-	
+
 	l->board.width = l->cellWidth * b->width + l->cellGap * (b->width - 1);
 	l->board.height = l->cellWidth * b->height + l->cellGap * (b->height - 1);
 
@@ -146,18 +148,32 @@ void Chess_MInitializeDefault(struct Chess* c) {
 	ChessLayout_MRecalculate(&c->layout, &c->board);
 }
 
+Rectangle ChessLayout_MGetCellRect(struct ChessLayout* l, int r, int c) {
+	int w = l->cellWidth;
+	int x = l->board.x + (w + l->cellGap) * c;
+	int y = l->board.y + (w + l->cellGap) * r;
+	return (Rectangle) {
+		x, y,
+		w, w,
+	};
+}
+
+struct IPoint ChessLayout_MGetCellFromPoint(struct ChessLayout* l, int x, int y) {
+	// l->board
+}
+
 void Chess_MDraw(struct Chess* chess){
+	BeginDrawing();
+	ClearBackground(RAYWHITE);
+
 	if(IsWindowResized()){
 		ChessLayout_MRecalculate(&chess->layout, &chess->board);
 	}
 
 	for(int r = 0; r < 8; ++r){
 		for(int c = 0; c < 8; ++c){
-			int w = chess->layout.cellWidth;
-			int x = chess->layout.board.x + (w + chess->layout.cellGap) * c;
-			int y = chess->layout.board.y + (w + chess->layout.cellGap) * (7 - r);
-
-			DrawRectangle(x, y, w, w, GRAY);
+			Rectangle rect = ChessLayout_MGetCellRect(&chess->layout, chess->board.height - r - 1, c);
+			DrawRectangleRec(rect, GRAY);
 
 			struct ChessPiece* piece = ChessBoard_MGetPiece(&chess->board, r, c);
 			if(piece->type == CHESS_PIECE_NONE) continue;
@@ -167,10 +183,24 @@ void Chess_MDraw(struct Chess* chess){
 
 			DrawText(
 				pieceName,
-				x + w / w, y + w / 2, 16, pieceColor
+				rect.x, rect.y, 16, pieceColor
 			);
 		}
 	}
+
+	EndDrawing();
+}
+
+void Chess_MProcessInput(struct Chess* c){
+	if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+		int mouseX = GetMouseX();
+		int mouseY = GetMouseY();
+	}
+}
+
+void Chess_MUpdate(struct Chess* c){
+	Chess_MDraw(c);
+	Chess_MProcessInput(c);
 }
 
 void Chess_MDestruct(struct Chess* c) {

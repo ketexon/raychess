@@ -1,3 +1,4 @@
 build
 valgrind-out.txt
 .cache
+.vscode

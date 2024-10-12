@@ -4,6 +4,10 @@
 #include "Error.h"
 #include "raylib.h"
 
+struct IPoint {
+	int x, y;
+};
+
 enum ChessPieceType {
 	CHESS_PIECE_NONE = 0,
 	CHESS_PIECE_PAWN = 1,
@@ -62,12 +66,15 @@ void ChessBoard_MDestruct(struct ChessBoard*);
 const char* ChessBoard_SGetCellName(int r, int c);
 
 struct ChessLayout {
+	int rows, cols;
 	Rectangle board;
 	int cellWidth;
 	int cellGap;
 };
 
 void ChessLayout_MRecalculate(struct ChessLayout*, struct ChessBoard*);
+Rectangle ChessLayout_MGetCellRect(struct ChessLayout*, int r, int c);
+struct IPoint ChessLayout_MGetCellFromPoint(struct ChessLayout*, int x, int y);
 
 struct Chess {
 	struct ChessBoard board;
@@ -77,7 +84,7 @@ struct Chess {
 
 void Chess_MInitializeDefault(struct Chess*);
 
-void Chess_MDraw(struct Chess*);
+void Chess_MUpdate(struct Chess*);
 
 void Chess_MDestruct(struct Chess*);
 
