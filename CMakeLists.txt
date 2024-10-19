@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 project(RaylibChess)
 
 include(FetchContent)
@@ -23,4 +21,10 @@ add_executable(
 target_link_libraries(
 	RaylibChess
 	raylib
+)
+
+set_target_properties(
+	RaylibChess
+	PROPERTIES
+	EXPORT_COMPILE_COMMANDS ON
 )

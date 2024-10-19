@@ -5,7 +5,7 @@
 
 #include <stdlib.h>
 
-const char* ChessPieceType_MGetName(enum ChessPieceType type){
+const char* ChessPieceType_MGetName(ChessPieceType type){
 	const char* names[] = {
 		0,
 		"Pawn",
@@ -18,7 +18,7 @@ const char* ChessPieceType_MGetName(enum ChessPieceType type){
 	return names[type];
 }
 
-const char* ChessPieceType_MGetShortName(enum ChessPieceType type){
+const char* ChessPieceType_MGetShortName(ChessPieceType type){
 	if(type > CHESS_PIECE_MAX) {
 		CHESS_LOG_FATAL("INVALID PIECE PASSED TO ChessPiece_MGetShortName: %d\n", type);
 		exit(1);
@@ -51,8 +51,8 @@ struct ChessPiece* ChessBoard_MGetPiece(struct ChessBoard* b, int r, int c){
 }
 
 
-enum Error ChessBoard_MInitializeDefaultStartingPieces(struct ChessBoard* b) {
-	enum ChessPieceType edgePieces[] = {
+Error ChessBoard_MInitializeDefaultStartingPieces(struct ChessBoard* b) {
+	ChessPieceType edgePieces[] = {
 		CHESS_PIECE_ROOK,
 		CHESS_PIECE_KNIGHT,
 		CHESS_PIECE_BISHOP,
@@ -138,16 +138,6 @@ void ChessLayout_MRecalculate(struct ChessLayout* l, struct ChessBoard* b) {
 	CHESS_LOG_INFO("\tCell: %d\n", l->cellWidth);
 }
 
-void Chess_MInitializeDefault(struct Chess* c) {
-	ChessBoard_MInitialize(&c->board, DEFAULT_CHESS_BOARD_WIDTH, DEFAULT_CHESS_BOARD_HEIGHT);
-	enum Error e = ChessBoard_MInitializeDefaultStartingPieces(&c->board);
-	if(!ERROR_OK(e)) {
-		CHESS_LOG_FATAL("Could not initialize default chess board: %d", e);
-	}
-
-	ChessLayout_MRecalculate(&c->layout, &c->board);
-}
-
 Rectangle ChessLayout_MGetCellRect(struct ChessLayout* l, int r, int c) {
 	int w = l->cellWidth;
 	int x = l->board.x + (w + l->cellGap) * c;
@@ -159,7 +149,47 @@ Rectangle ChessLayout_MGetCellRect(struct ChessLayout* l, int r, int c) {
 }
 
 struct IPoint ChessLayout_MGetCellFromPoint(struct ChessLayout* l, int x, int y) {
-	// l->board
+	// for cell r,c
+	// the rect is
+	// r.x: l->board.x + (cellGap + cellWidth) * c,
+	// r.y: l->board.y + (cellGap + cellWidth) * r,
+	// r.w,r.h: l->board.cellWidth
+	// thus: r.x <= x <= r.x + r.w
+	// thus: 0 <= x - board.x + (cellGap + cellWidth)*c <= cellWidth
+	// thus: (board.x - x)/(cellGap + cellWidth)
+	//			<= c
+	//			<= (board.x - x + cellWidth)/(cellGap + cellWidth)
+	// since c is an int, c = (board.x - x)/(cellGap + cellWidth)
+	int c = (x - l->board.x)/(l->cellGap + l->cellWidth);
+	int r = (y - l->board.y)/(l->cellGap + l->cellWidth);
+	return (struct IPoint) {
+		c, r
+	};
+}
+
+struct IPoint Chess_MGetGridCellFromLocal(struct Chess *chess, int r, int c){
+	struct IPoint out;
+
+	out.x = chess->side == CHESS_WHITE ? c : (chess->board.width - c - 1);
+	out.y = chess->side == CHESS_WHITE ? (chess->board.height - r - 1) : r;
+
+	return out;
+}
+
+struct IPoint Chess_MGetLocalCellFromGrid(struct Chess *chess, int r, int c){
+	// the transformation is symmetric
+	return Chess_MGetGridCellFromLocal(chess, r, c);
+}
+
+void Chess_MInitializeDefault(struct Chess* c) {
+	c->side = CHESS_BLACK;
+	ChessBoard_MInitialize(&c->board, DEFAULT_CHESS_BOARD_WIDTH, DEFAULT_CHESS_BOARD_HEIGHT);
+	Error e = ChessBoard_MInitializeDefaultStartingPieces(&c->board);
+	if(!ERROR_OK(e)) {
+		CHESS_LOG_FATAL("Could not initialize default chess board: %d", e);
+	}
+
+	ChessLayout_MRecalculate(&c->layout, &c->board);
 }
 
 void Chess_MDraw(struct Chess* chess){
@@ -170,10 +200,27 @@ void Chess_MDraw(struct Chess* chess){
 		ChessLayout_MRecalculate(&chess->layout, &chess->board);
 	}
 
-	for(int r = 0; r < 8; ++r){
-		for(int c = 0; c < 8; ++c){
-			Rectangle rect = ChessLayout_MGetCellRect(&chess->layout, chess->board.height - r - 1, c);
-			DrawRectangleRec(rect, GRAY);
+	for(int r = 0; r < chess->board.height; ++r){
+		for(int c = 0; c < chess->board.width; ++c){
+			struct IPoint gridCell = Chess_MGetGridCellFromLocal(
+				chess,
+				r,
+				c
+			);
+
+			Rectangle rect = ChessLayout_MGetCellRect(
+				&chess->layout,
+				gridCell.y,
+				gridCell.x
+			);
+
+			Color color = (
+				(gridCell.y + gridCell.x) % 2 == 0
+				? CELL_COLOR_LIGHT
+				: CELL_COLOR_DARK
+			);
+
+			DrawRectangleRec(rect, color);
 
 			struct ChessPiece* piece = ChessBoard_MGetPiece(&chess->board, r, c);
 			if(piece->type == CHESS_PIECE_NONE) continue;
@@ -192,10 +239,24 @@ void Chess_MDraw(struct Chess* chess){
 }
 
 void Chess_MProcessInput(struct Chess* c){
+	int mouseX = GetMouseX();
+	int mouseY = GetMouseY();
+
+	struct IPoint gridCell = ChessLayout_MGetCellFromPoint(
+		&c->layout,
+		mouseX,
+		mouseY
+	);
+
+	c->hoveredCell = Chess_MGetLocalCellFromGrid(
+		c,
+		gridCell.x,
+		gridCell.y
+	);
+
 	if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-		int mouseX = GetMouseX();
-		int mouseY = GetMouseY();
 	}
+
 }
 
 void Chess_MUpdate(struct Chess* c){
