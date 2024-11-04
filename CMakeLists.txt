@@ -16,6 +16,8 @@ add_executable(
 	src/Const.h
 	src/Chess.h src/Chess.c
 	src/Log.h
+	src/generated/Assets.c src/generated/Assets.h
+	src/Resources.h src/Resources.c
 )
 
 target_link_libraries(

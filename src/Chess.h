@@ -4,9 +4,17 @@
 #include "Error.h"
 #include "raylib.h"
 #include <stdint.h>
+#include "Resources.h"
 
 struct IPoint {
-	int x, y;
+	union {
+		int x;
+		int c;
+	};
+	union {
+		int y;
+		int r;
+	};
 };
 
 typedef uint8_t ChessPieceType;
@@ -39,7 +47,14 @@ struct ChessPiece {
 #define DEFAULT_CHESS_BOARD_HEIGHT 8
 
 struct ChessBoard {
-	int width, height;
+	union {
+		int width;
+		int nCols;
+	};
+	union {
+		int height;
+		int nRows;
+	};
 	/**
 	 * Each cell of the chess board,
 	 * where pieces[0][0] is A1
@@ -51,6 +66,9 @@ struct ChessBoard {
 void ChessBoard_MInitialize(struct ChessBoard*, int w, int h);
 
 struct ChessPiece* ChessBoard_MGetPiece(struct ChessBoard*, int r, int c);
+struct ChessPiece* ChessBoard_MGetPiecePoint(struct ChessBoard*, struct IPoint);
+
+int ChessBoard_MCellInBounds(struct ChessBoard*, struct IPoint);
 
 /**
  * Sets the default starting layout. Requires the board
@@ -75,17 +93,39 @@ void ChessLayout_MRecalculate(struct ChessLayout*, struct ChessBoard*);
 Rectangle ChessLayout_MGetCellRect(struct ChessLayout*, int r, int c);
 struct IPoint ChessLayout_MGetCellFromPoint(struct ChessLayout*, int x, int y);
 
+struct Move {
+	struct ChessPiece piece;
+	struct IPoint from;
+	struct IPoint to;
+	struct ChessPiece capture;
+};
+
 struct Chess {
 	struct ChessBoard board;
 	struct ChessLayout layout;
+
+	struct Resources resources;
+
 	ChessSide side;
 	ChessSide turn;
 
 	struct IPoint hoveredCell;
+	struct IPoint selectedCell;
+
+	int nPossibleMoves;
+	struct IPoint* possibleMoves;
+
+	struct IPoint enpassantSquare;
+
+	int nMoveHistory;
+	int moveHistoryCap;
+	struct Move* moveHistory;
 };
 
-struct IPoint Chess_MGetLocalCellFromGrid(struct Chess*, int r, int c);
-struct IPoint Chess_MGetGridCellFromLocal(struct Chess*, int r, int c);
+struct TextureSlice Chess_MGetTextureSliceFromPiece(struct Chess*, struct ChessPiece);
+
+struct IPoint Chess_MGetLocalCellFromGrid(struct Chess*, struct IPoint);
+struct IPoint Chess_MGetGridCellFromLocal(struct Chess*, struct IPoint);
 
 void Chess_MInitializeDefault(struct Chess*);
 
