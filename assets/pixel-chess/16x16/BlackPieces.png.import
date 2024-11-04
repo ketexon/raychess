@@ -1,0 +1,37 @@
+name = "BLACK_PIECES"
+
+[PAWN]
+X = 0
+Y = 0
+WIDTH = 16
+HEIGHT = 16
+
+[KNIGHT]
+X = 16
+Y = 0
+WIDTH = 16
+HEIGHT = 16
+
+[ROOK]
+X = 32
+Y = 0
+WIDTH = 16
+HEIGHT = 16
+
+[BISHOP]
+X = 48
+Y = 0
+WIDTH = 16
+HEIGHT = 16
+
+[QUEEN]
+X = 64
+Y = 0
+WIDTH = 16
+HEIGHT = 16
+
+[KING]
+X = 80
+Y = 0
+WIDTH = 16
+HEIGHT = 16

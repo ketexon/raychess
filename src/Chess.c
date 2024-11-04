@@ -100,6 +100,8 @@ Error ChessBoard_MInitializeDefaultStartingPieces(struct ChessBoard* b) {
 			else if (r == 1 || r == 6){
 				piece->type = CHESS_PIECE_PAWN;
 			}
+
+			piece->moveCount = 0;
 		}
 	}
 	return ERROR_NONE;
@@ -234,6 +236,9 @@ void Chess_MInitializeDefault(struct Chess* c) {
 
 	c->enpassantSquare.r = -1;
 	c->enpassantSquare.c = -1;
+
+	c->whiteKingMoved = 0;
+	c->blackKingMoved = 0;
 
 	ChessBoard_MInitialize(&c->board, DEFAULT_CHESS_BOARD_WIDTH, DEFAULT_CHESS_BOARD_HEIGHT);
 	Error e = ChessBoard_MInitializeDefaultStartingPieces(&c->board);
@@ -499,7 +504,49 @@ struct IPoint* Chess_MCalculatePossibleMoves(struct Chess* chess, struct IPoint 
 				}
 			}
 		}
+	}
 
+	if(piece->type == CHESS_PIECE_KING){
+		struct IPoint otherCell;
+		for(int i = -1; i <= 1; ++i){
+			for(int j = -1; j <= 1; ++j){
+				if(i == 0 && j == 0) continue;
+				otherCell.r = cell.r + i;
+				otherCell.c = cell.c + j;
+
+				otherPiece = ChessBoard_MGetPiecePoint(&chess->board, otherCell);
+				if(otherPiece && (otherPiece->type == CHESS_PIECE_NONE || otherPiece->side != piece->side)){
+					possibleMoves[nPossibleMoves++] = otherCell;
+				}
+			}
+		}
+
+		// check castle
+		if(piece->moveCount == 0){
+			printf("castlable\n");
+			for(int dir = -1; dir <= 1; dir += 2){
+				otherCell.r = cell.r;
+				otherCell.c = cell.c;
+				while(1){
+					otherCell.c += dir;
+					printf("%d %d\n", otherCell.r, otherCell.c);
+					otherPiece = ChessBoard_MGetPiecePoint(&chess->board, otherCell);
+					if(!otherPiece) {
+						break;
+					}
+					if(otherPiece->type != CHESS_PIECE_NONE){
+						if(
+							otherPiece->side == piece->side
+							&& otherPiece->type == CHESS_PIECE_ROOK
+							&& otherPiece->moveCount == 0
+						){
+							possibleMoves[nPossibleMoves++] = otherCell;
+						}
+						break;
+					}
+				}
+			}
+		}
 	}
 
 	if(nPossibleMoves == 0){
@@ -520,6 +567,7 @@ void Chess_MForceMove(struct Chess* c, struct IPoint from, struct IPoint to){
 		*toPiece = *fromPiece;
 		fromPiece->type = CHESS_PIECE_NONE;
 	}
+	toPiece->moveCount += 1;
 }
 
 void Chess_MSwapTurns(struct Chess* c){
@@ -541,6 +589,14 @@ void Chess_MSaveMove(struct Chess* c, struct Move move){
 		if(delta > 1 || -delta > 1){
 			c->enpassantSquare = move.from;
 			c->enpassantSquare.r += delta/2;
+		}
+	}
+	if(move.piece.type == CHESS_PIECE_KING){
+		if(move.piece.side == CHESS_WHITE){
+			c->whiteKingMoved = 1;
+		}
+		else {
+			c->blackKingMoved = 1;
 		}
 	}
 }
@@ -570,20 +626,32 @@ int Chess_MTryMove(struct Chess* c, struct IPoint from, struct IPoint to){
 
 			struct ChessPiece* capture = ChessBoard_MGetPiecePoint(&c->board, possibleMove);
 
-			if(capture) {
+			if(capture && capture->side != piece->side) {
 				move.capture = *capture;
 			}
-
+			// this is a castle
+			if(capture && capture->side == piece->side){
+				int dir = to.c - from.c;
+				dir /= ABS(dir);
+				struct IPoint rookTo;
+				rookTo.r = to.r;
+				rookTo.c = to.c - dir;
+				printf("%d\n", rookTo.c);
+				Chess_MForceMove(
+					c,
+					to,
+					rookTo
+				);
+			}
 			// check en passant
 			if(piece->type == CHESS_PIECE_PAWN) {
-				printf("%d %d %d %d\n", to.r, to.c, c->enpassantSquare.r, c->enpassantSquare.c);
 				if (to.r == c->enpassantSquare.r && to.c == c->enpassantSquare.c){
-					printf("EN PASSANT\n");
 					capture = Chess_MGetEnPassantPiece(c);
 					move.capture = *capture;
 					capture->type = CHESS_PIECE_NONE;
 				}
 			}
+
 			Chess_MForceMove(c, from, to);
 			Chess_MSaveMove(c, move);
 			Chess_MSwapTurns(c);

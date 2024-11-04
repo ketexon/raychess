@@ -41,6 +41,7 @@ typedef uint8_t ChessSide;
 struct ChessPiece {
 	ChessPieceType type : 7;
 	ChessSide side : 1;
+	int moveCount;
 };
 
 #define DEFAULT_CHESS_BOARD_WIDTH 8
@@ -116,6 +117,8 @@ struct Chess {
 	struct IPoint* possibleMoves;
 
 	struct IPoint enpassantSquare;
+	int whiteKingMoved;
+	int blackKingMoved;
 
 	int nMoveHistory;
 	int moveHistoryCap;
