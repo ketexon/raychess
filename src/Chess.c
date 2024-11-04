@@ -481,7 +481,6 @@ struct IPoint* Chess_MCalculatePossibleMoves(struct Chess* chess, struct IPoint 
 		}
 
 		// en passant captures
-		// printf("%d %d\n", chess->enpassantSquare.r, chess->enpassantSquare.c);
 		if (chess->enpassantSquare.r >= 0){
 			if(ABS(cell.c - chess->enpassantSquare.c) == 1 && chess->enpassantSquare.r == cell.r + moveDir){
 				possibleMoves[nPossibleMoves++] = chess->enpassantSquare;
@@ -523,13 +522,11 @@ struct IPoint* Chess_MCalculatePossibleMoves(struct Chess* chess, struct IPoint 
 
 		// check castle
 		if(piece->moveCount == 0){
-			printf("castlable\n");
 			for(int dir = -1; dir <= 1; dir += 2){
 				otherCell.r = cell.r;
 				otherCell.c = cell.c;
 				while(1){
 					otherCell.c += dir;
-					printf("%d %d\n", otherCell.r, otherCell.c);
 					otherPiece = ChessBoard_MGetPiecePoint(&chess->board, otherCell);
 					if(!otherPiece) {
 						break;
@@ -636,7 +633,6 @@ int Chess_MTryMove(struct Chess* c, struct IPoint from, struct IPoint to){
 				struct IPoint rookTo;
 				rookTo.r = to.r;
 				rookTo.c = to.c - dir;
-				printf("%d\n", rookTo.c);
 				Chess_MForceMove(
 					c,
 					to,
